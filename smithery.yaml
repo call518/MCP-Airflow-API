@@ -1,0 +1,34 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({command: 'mcp-airflow-api', args: config.logLevel ? ['--log-level', config.logLevel] : [], env: {AIRFLOW_API_URL: config.airflowApiUrl, AIRFLOW_API_USERNAME: config.airflowApiUsername, AIRFLOW_API_PASSWORD: config.airflowApiPassword, AIRFLOW_LOG_LEVEL: config.logLevel || 'INFO'}})
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - airflowApiUrl
+      - airflowApiUsername
+      - airflowApiPassword
+    properties:
+      airflowApiUrl:
+        type: string
+        description: Base URL for the Airflow REST API, e.g., http://localhost:8080/api/v1
+      airflowApiUsername:
+        type: string
+        description: Username for Airflow API Basic Auth
+      airflowApiPassword:
+        type: string
+        description: Password for Airflow API Basic Auth
+      logLevel:
+        type: string
+        default: INFO
+        description: Optional log level override
+  exampleConfig:
+    airflowApiUrl: http://localhost:8080/api/v1
+    airflowApiUsername: airflow
+    airflowApiPassword: airflow
+    logLevel: INFO
