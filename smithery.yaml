@@ -1,76 +1,34 @@
-
-## Smithery configuration for MCP Airflow API server
-## Docs: https://smithery.ai/docs/config#smitheryyaml
-## This file defines how Smithery (and Smithery-compatible MCP client launchers)
-## can start the Airflow MCP server via stdio.
-
-name: mcp-airflow-api
-description: "MCP server exposing Apache Airflow cluster management & monitoring tools."
-homepage: https://github.com/call518/MCP-Airflow-API
-license: MIT
-tags:
-  - airflow
-  - dag
-  - cluster
-  - monitoring
-  - mcp
-
-build:
-  dockerfile: "Dockerfile.smithery.ai"
-  dockerBuildPath: "."
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
 
 startCommand:
   type: stdio
-  # User-supplied configuration schema mapped to environment variables.
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({ command: 'mcp-airflow-api', args: [], env: { AIRFLOW_API_URL: config.airflowApiUrl, AIRFLOW_API_USERNAME: config.airflowApiUsername, AIRFLOW_API_PASSWORD: config.airflowApiPassword, AIRFLOW_LOG_LEVEL: config.airflowLogLevel || 'INFO' } })
   configSchema:
+    # JSON Schema defining the configuration options for the MCP.
     type: object
     required:
-      - AIRFLOW_API_URL
-      - AIRFLOW_API_USERNAME
-      - AIRFLOW_API_PASSWORD
-      - AIRFLOW_LOG_LEVEL
+      - airflowApiUrl
+      - airflowApiUsername
+      - airflowApiPassword
     properties:
-      AIRFLOW_API_URL:
+      airflowApiUrl:
         type: string
-        description: "Airflow REST API base URL (e.g. http://localhost:8080/api/v1)"
-        default: http://localhost:8080/api/v1
-        secret: false
-      AIRFLOW_API_USERNAME:
+        description: The URL of the Airflow API, e.g., http://localhost:8080/api/v1
+      airflowApiUsername:
         type: string
-        description: "Airflow API username"
-        default: airflow
-        secret: false
-      AIRFLOW_API_PASSWORD:
+        description: Airflow API username
+      airflowApiPassword:
         type: string
-        description: "Airflow API password"
-        default: airflow
-        secret: true
-      AIRFLOW_LOG_LEVEL:
+        description: Airflow API password
+      airflowLogLevel:
         type: string
-        description: "Log level for MCP server (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
         default: INFO
-        secret: false
-  commandFunction: |-
-    (config) => {
-      // Always use the installed console script from PyPI.
-      // (Smithery environment must have already run: pip install mcp-airflow-api[latest|==version])
-      const env = {
-        AIRFLOW_API_URL: config.AIRFLOW_API_URL,
-        AIRFLOW_API_USERNAME: config.AIRFLOW_API_USERNAME,
-        AIRFLOW_API_PASSWORD: config.AIRFLOW_API_PASSWORD,
-        AIRFLOW_LOG_LEVEL: config.AIRFLOW_LOG_LEVEL || 'INFO',
-      };
-      const args = ['--log-level', env.AIRFLOW_LOG_LEVEL];
-      return { command: 'mcp-airflow-api', args, env };
-    }
+        description: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
   exampleConfig:
-    AIRFLOW_API_URL: http://localhost:8080/api/v1
-    AIRFLOW_API_USERNAME: airflow
-    AIRFLOW_API_PASSWORD: airflow
-    AIRFLOW_LOG_LEVEL: INFO
-
-## Notes:
-## - Set AIRFLOW_API_PASSWORD via Smithery secret storage if available.
-## - Adjust AIRFLOW_API_URL for your environment.
-## - Set AIRFLOW_LOG_LEVEL to control logging verbosity (DEBUG, INFO, etc).
-## - Ensure the hosting environment installs the package: pip install mcp-airflow-api (optionally pin a version).
+    airflowApiUrl: http://localhost:8080/api/v1
+    airflowApiUsername: airflow
+    airflowApiPassword: airflow
+    airflowLogLevel: INFO
