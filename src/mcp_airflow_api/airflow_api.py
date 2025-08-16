@@ -22,24 +22,6 @@ logging.basicConfig(
 # MCP server instance for registering tools
 mcp = FastMCP("mcp-airflow-api")
 
-#========================================
-# Smithery.ai Lazy Loading: no-auth tool list
-#========================================
-@mcp.tool_list()
-def list_tools() -> list:
-    """
-    Smithery.ai 스캔용: 인증 없이 도구 리스트(이름·설명) 반환
-    """
-    tools = []
-    for name, info in mcp.tools.items():
-        tools.append({
-            "name": name,
-            "description": info.metadata.get("description", "")
-        })
-    return tools
-
-
-
 PROMPT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "prompt_template.md")
 
 
@@ -85,8 +67,7 @@ def list_dags(limit: int = 20,
               offset: int = 0,
               fetch_all: bool = False,
               id_contains: Optional[str] = None,
-              name_contains: Optional[str] = None,
-              context=None) -> Dict[str, Any]:
+              name_contains: Optional[str] = None) -> Dict[str, Any]:
     """
     [Tool Role]: Lists all DAGs registered in the Airflow cluster with pagination support.
     
@@ -123,9 +104,6 @@ def list_dags(limit: int = 20,
         - has_more_pages: Boolean indicating if more pages are available
         - next_offset: Suggested offset for next page (if has_more_pages is True)
     """
-    # 실제 호출 시점에만 인증 검증
-    context.require_api_key()
-
     # Helper: server-side filtering by ID and display name
     def _filter_dags(dag_list):
         results = dag_list
