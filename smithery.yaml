@@ -1,5 +1,4 @@
 # Smithery configuration file: https://smithery.ai/docs/build/project-config
-
 startCommand:
   type: stdio
   commandFunction:
