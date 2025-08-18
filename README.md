@@ -2,11 +2,13 @@
 
 **Apache Airflow MCP Server** | **Model Context Protocol** | **Natural Language DAG Management** | **Airflow API Integration**
 
+
 > **Benefits**: Monitor and manage Apache Airflow clusters through natural language queries via MCP tools: DAG inspection, task monitoring, health checks, and cluster analytics without API complexity.
 
 [![Verified on MSeeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/d024d598-d442-4e4e-827b-d976e4d372fb)
 
 [![Deploy to PyPI with tag](https://github.com/call518/MCP-Airflow-API/actions/workflows/pypi-publish.yml/badge.svg)](https://github.com/call518/MCP-Airflow-API/actions/workflows/pypi-publish.yml)
+
 
 ## Overview
 
@@ -659,3 +661,4 @@ uv run pytest tests/test_prompt_template.py -v
 ## License
 
 This project is licensed under the MIT License.
+
