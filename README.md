@@ -113,7 +113,7 @@ uvx --python 3.12 mcp-airflow-api
       }
     }
   }
-}
+}git
 ```
 
 **Remote Access (streamable-http mode without authentication)**
