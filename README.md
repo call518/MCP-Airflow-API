@@ -80,6 +80,9 @@ docker-compose up -d
 ```
 
 ### Getting Started with OpenWebUI (Docker Option)
+
+> 📌 **Note**: Web-UI configuration instructions are based on OpenWebUI **v0.6.22**. Menu locations and settings may differ in newer versions.
+
 1. Access http://localhost:3002/
 2. Log in with admin account
 3. Go to "Settings" → "Tools" from the top menu
