@@ -24,6 +24,9 @@ import logging
 
 from mcp_airflow_api.functions import get_api_version
 
+
+TRUTHY_VALUES = ("true", "1", "yes", "on")
+
 # Setup logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -35,43 +38,18 @@ logging.basicConfig(
 # Authentication Setup
 # =============================================================================
 
-def create_mcp_instance(auth_enable: bool = False, secret_key: str = "") -> FastMCP:
-    """Create FastMCP instance with optional authentication."""
-    
-    if auth_enable and secret_key:
-        if not HAS_AUTH_SUPPORT:
-            logger.warning("Bearer token authentication requested but StaticTokenVerifier not available")
-            logger.warning("Creating MCP instance without authentication")
-            return FastMCP("mcp-airflow-api")
-        
-        # Simple token-based authentication using StaticTokenVerifier
-        # This is much simpler than JWT with RSA keys
-        logger.info("Creating MCP instance with Bearer token authentication")
-        
-        # Create token configuration
-        # The key is the token, the value contains metadata about the token
-        tokens = {
-            secret_key: {
-                "client_id": "airflow-api-client",
-                "user": "admin",
-                "scopes": ["read", "write"],
-                "description": "Airflow API access token"
-            }
-        }
-        
-        try:
-            auth = StaticTokenVerifier(tokens=tokens)
-            return FastMCP("mcp-airflow-api", auth=auth)
-        except Exception as e:
-            logger.warning(f"Failed to create StaticTokenVerifier: {e}")
-            logger.warning("Creating MCP instance without authentication")
-            return FastMCP("mcp-airflow-api")
-    else:
-        logger.info("Creating MCP instance without authentication")
-        return FastMCP("mcp-airflow-api")
+def _parse_bool_env(value: str) -> bool:
+    return value.strip().lower() in TRUTHY_VALUES
 
-# Initialize with default (no auth) - will be recreated in main() if needed
-mcp = FastMCP("mcp-airflow-api")
+
+def _build_static_token_auth(secret_key: str) -> Any:
+    tokens = {
+        secret_key: {
+            "client_id": "airflow-api-client",
+            "scopes": ["read", "write"],
+        }
+    }
+    return StaticTokenVerifier(tokens=tokens)
 
 def register_prompts(mcp, api_version: str):
     """Register prompt templates for the MCP server."""
@@ -252,7 +230,7 @@ def create_mcp_server() -> FastMCP:
     """Create and configure the MCP server with tools based on API version."""
     api_version = get_api_version()
     
-    # Note: Initial server creation without auth - will be recreated in main() if needed
+    # Runtime authentication is configured in main() before mcp.run().
     mcp_instance = FastMCP("mcp-airflow-api")
     
     logger.info(f"Initializing MCP server for Airflow API {api_version}")
@@ -293,8 +271,9 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument(
         "--type",
         dest="transport_type",
-        help="Transport type (stdio or streamable-http). Default: stdio",
+        help="Transport type. Default: env FASTMCP_TYPE or stdio",
         choices=["stdio", "streamable-http"],
+        default=None,
     )
     parser.add_argument(
         "--host",
@@ -307,11 +286,20 @@ def main(argv: Optional[List[str]] = None):
         type=int,
         help="Port number for streamable-http transport. Default: 8000",
     )
-    parser.add_argument(
+    auth_group = parser.add_mutually_exclusive_group()
+    auth_group.add_argument(
         "--auth-enable",
         dest="auth_enable",
         action="store_true",
-        help="Enable Bearer token authentication for streamable-http mode. Default: False",
+        default=None,
+        help="Enable Bearer token authentication for streamable-http mode.",
+    )
+    auth_group.add_argument(
+        "--auth-disable",
+        dest="auth_enable",
+        action="store_false",
+        default=None,
+        help="Disable Bearer token authentication for streamable-http mode.",
     )
     parser.add_argument(
         "--secret-key",
@@ -349,7 +337,10 @@ def main(argv: Optional[List[str]] = None):
     # Authentication 설정 결정
     # REMOTE_AUTH_ENABLE defaults to "false" when undefined, empty, or null
     # Supported values: true/false, 1/0, yes/no, on/off (case insensitive)
-    auth_enable = args.auth_enable or os.getenv("REMOTE_AUTH_ENABLE", "false").lower() in ("true", "1", "yes", "on")
+    if args.auth_enable is None:
+        auth_enable = _parse_bool_env(os.getenv("REMOTE_AUTH_ENABLE", "false"))
+    else:
+        auth_enable = args.auth_enable
     secret_key = args.secret_key or os.getenv("REMOTE_SECRET_KEY", "")
     
     # Validation for streamable-http mode with authentication
@@ -371,22 +362,15 @@ def main(argv: Optional[List[str]] = None):
     elif auth_enable:
         logger.warning("WARNING: Authentication is only supported in streamable-http mode, ignoring auth settings")
     
-    # Create MCP instance with or without authentication
-    global mcp
-    mcp = create_mcp_instance(auth_enable=auth_enable, secret_key=secret_key)
-    
-    # Load tools into the authenticated instance
-    api_version = get_api_version()
-    register_prompts(mcp, api_version)
-    
-    if api_version == "v1":
-        logger.info("Loading Airflow API v1 tools (Airflow 2.x)")
-        from mcp_airflow_api.tools import v1_tools
-        v1_tools.register_tools(mcp)
-    elif api_version == "v2":
-        logger.info("Loading Airflow API v2 tools (Airflow 3.0+)")
-        from mcp_airflow_api.tools import v2_tools
-        v2_tools.register_tools(mcp)
+    # Configure authentication provider before server startup.
+    if auth_enable:
+        try:
+            mcp.auth = _build_static_token_auth(secret_key)
+        except Exception as e:
+            logger.error(f"ERROR: Failed to initialize StaticTokenVerifier: {e}")
+            return
+    else:
+        mcp.auth = None
     
     # Transport 모드에 따른 실행
     if transport_type == "streamable-http":
