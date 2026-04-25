@@ -1,20 +1,26 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0", "wheel", "setuptools-scm"]
+# build-backend = "hatchling.build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-airflow-api"
-version = "0.0.0"
+dynamic = ["version"]
 description = "Model Context Protocol (MCP) server for Apache Airflow API integration. Provides comprehensive tools for managing Airflow clusters including service operations, configuration management, status monitoring, and request tracking."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.12.15",
     "fastmcp>=2.12.3",
+    "setuptools-scm>=10.0.5",
 ]
 
 [project.scripts]
 mcp-airflow-api = "mcp_airflow_api.mcp_main:main"
+
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
 
 [tool.hatch.build.targets.sdist]
 include = [
