@@ -1,5 +1,7 @@
 # 🚀 MCP-Airflow-API
 
+[![MCP Toplist](https://mcptoplist.com/badge/smithery%2Fcall518%2Fmcp-airflow-api.svg)](https://mcptoplist.com/server/smithery%2Fcall518%2Fmcp-airflow-api)
+
 > Revolutionary Open Source Tool for Managing Apache Airflow with Natural Language
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
