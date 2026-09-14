@@ -22,7 +22,12 @@ import os
 import argparse
 import logging
 
-from mcp_airflow_api.functions import get_api_version
+from mcp_airflow_api.functions import (
+    PROMPT_TEMPLATE_PATH,
+    get_api_version,
+    parse_prompt_sections,
+    read_prompt_template,
+)
 
 
 TRUTHY_VALUES = ("true", "1", "yes", "on")
@@ -50,6 +55,41 @@ def _build_static_token_auth(secret_key: str) -> Any:
         }
     }
     return StaticTokenVerifier(tokens=tokens)
+
+
+def get_prompt_template(
+    section: Optional[str] = None,
+    mode: Optional[str] = None,
+) -> str:
+    """Return the full prompt template, its headings, or one section."""
+    template = read_prompt_template(PROMPT_TEMPLATE_PATH)
+    headings, sections = parse_prompt_sections(template)
+
+    if mode == "headings":
+        heading_lines = [
+            f"{index}. {heading}" for index, heading in enumerate(headings, 1)
+        ]
+        return "## Section Headings\n" + "\n".join(heading_lines)
+
+    if not section:
+        return template
+
+    if section.isdigit():
+        section_number = int(section)
+        if 1 <= section_number <= len(headings):
+            return sections[section_number]
+        return f"Section '{section}' not found."
+
+    section_lower = section.lower()
+    for index, heading in enumerate(headings, 1):
+        if section_lower in heading.lower():
+            return sections[index]
+
+    for content in sections[1:]:
+        if section_lower in content.lower():
+            return content
+
+    return f"Section '{section}' not found."
 
 def register_prompts(mcp, api_version: str):
     """Register prompt templates for the MCP server."""
