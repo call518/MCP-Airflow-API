@@ -5,8 +5,8 @@
 This MCP server provides natural language tools for managing Apache Airflow clusters via REST API. All prompts and tool outputs are designed for minimal, LLM-friendly English responses.
 
 **Airflow API Version Support**:
-- **API v1**: Based on [Airflow 2.x REST API](https://airflow.apache.org/docs/apache-airflow/2.0.0/stable-rest-api-ref.html) - 43 tools
-- **API v2**: Based on [Airflow 3.0+ REST API](https://airflow.apache.org/docs/apache-airflow/stable/stable-rest-api-ref.html) - 45 tools
+- **API v1**: Based on [Airflow 2.x REST API](https://airflow.apache.org/docs/apache-airflow/2.0.0/stable-rest-api-ref.html) - 54 tools
+- **API v2**: Based on [Airflow 3.0+ REST API](https://airflow.apache.org/docs/apache-airflow/stable/stable-rest-api-ref.html) - 56 registered tools
 - **Dynamic Selection**: Controlled by `AIRFLOW_API_VERSION` environment variable
 
 **IMPORTANT: Current Date Context** - Relative dates should be resolved against the server's current time (handled internally by the tools).
@@ -32,8 +32,8 @@ This MCP server provides natural language tools for managing Apache Airflow clus
 ## 3. Available MCP Tools
 
 **Tool Count by API Version**:
-- **API v1** (Airflow 2.x): 56 MCP Tools (43 common + 13 management tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/2.11.0/stable-rest-api-ref.html)
-- **API v2** (Airflow 3.0+): 49 MCP Tools (43 common + 2 assets + 4 management tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/stable/stable-rest-api-ref.html)
+- **API v1** (Airflow 2.x): 54 MCP Tools (all from common_tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/2.11.0/stable-rest-api-ref.html)
+- **API v2** (Airflow 3.0+): 56 registered MCP Tools (54 common + 2 asset tools; 8 common tools are v1-only) - [Documentation](https://airflow.apache.org/docs/apache-airflow/stable/stable-rest-api-ref.html)
 
 **Complete Airflow API coverage with async performance optimization and dynamic version selection.**
 
@@ -322,7 +322,7 @@ list_dataset_events()
 ## 10. References
 
 - **MCP Server Main**: `src/mcp_airflow_api/mcp_main.py`
-- **Common Tools**: `src/mcp_airflow_api/tools/common_tools.py` (43 shared functions)
+- **Common Tools**: `src/mcp_airflow_api/tools/common_tools.py` (54 registered tools, including 8 v1-only operations)
 - **API v1 Tools**: `src/mcp_airflow_api/tools/v1_tools.py` (imports common tools)
 - **API v2 Tools**: `src/mcp_airflow_api/tools/v2_tools.py` (common tools + 2 asset tools)
 - Utility functions: `src/mcp_airflow_api/functions.py`

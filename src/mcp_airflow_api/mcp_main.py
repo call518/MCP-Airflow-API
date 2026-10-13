@@ -121,7 +121,7 @@ def register_prompts(mcp, api_version: str):
 **API Version**: {api_version}
 **Target DAG**: {dag_name or "All DAGs"}
 **Time Range**: {time_range}
-**Available Tools**: {"45 tools (43 common + 2 asset tools)" if api_version == "v2" else "43 tools"}
+**Available Tools**: {"56 registered tools" if api_version == "v2" else "54 tools"}
 
 ## Session Instructions
 
@@ -140,6 +140,7 @@ For DAG analysis, use `list_dags`, `running_dags`, and `failed_dags` to get an o
             context += """
 ## V2 Enhanced Features Available
 
+- **Tool Availability**: 54 common + 2 asset tools; 8 common tools are v1-only
 - **Asset Management**: Use `list_assets` and `list_asset_events` for data-aware scheduling
 - **Enhanced DAG Analysis**: All tools support improved filtering and metadata
 - **JWT Authentication**: Automatic token management for Airflow 3.0+

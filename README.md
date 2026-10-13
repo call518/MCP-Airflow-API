@@ -35,10 +35,10 @@ MCP-Airflow-API is an MCP server that leverages the **Model Context Protocol (MC
 
 **Now supports both Airflow API v1 (2.x) and v2 (3.0+)** with dynamic version selection via environment variable:
 
-- **API v1**: Full compatibility with Airflow 2.x clusters (43 tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/2.11.0/stable-rest-api-ref.html)
-- **API v2**: Enhanced features for Airflow 3.0+ including asset management for data-aware scheduling (45 tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/3.1.0/stable-rest-api-ref.html)
+- **API v1**: Full compatibility with Airflow 2.x clusters (54 tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/2.11.0/stable-rest-api-ref.html)
+- **API v2**: Enhanced features for Airflow 3.0+ including asset management for data-aware scheduling (56 registered tools) - [Documentation](https://airflow.apache.org/docs/apache-airflow/3.1.0/stable-rest-api-ref.html)
 
-**Key Architecture**: Single MCP server with shared common tools (43) plus v2-exclusive asset tools (2) - dynamically loads appropriate toolset based on `AIRFLOW_API_VERSION` environment variable!
+**Key Architecture**: Single MCP server with shared common tools (54) plus v2-exclusive asset tools (2) - dynamically loads appropriate toolset based on `AIRFLOW_API_VERSION` environment variable!
 
 **Traditional approach (example):**
 ```bash
@@ -207,8 +207,8 @@ python -m mcp_airflow_api
 
 3. **Dynamic API Version Support**  
    Single MCP server adapts to your Airflow version:
-   - **API v1**: 43 shared tools for Airflow 2.x compatibility
-   - **API v2**: 43 shared tools + 2 asset management tools for Airflow 3.0+
+   - **API v1**: 54 shared tools for Airflow 2.x compatibility
+   - **API v2**: 54 shared tools + 2 asset management tools for Airflow 3.0+
    - **Environment Variable Control**: Switch versions instantly with `AIRFLOW_API_VERSION`
    - **Zero Configuration Changes**: Same tool names, enhanced capabilities
    - **Efficient Architecture**: Shared common codebase eliminates duplication
@@ -333,8 +333,8 @@ REMOTE_SECRET_KEY=your-secure-secret-key-here
 
 | Feature | API v1 (Airflow 2.x) | API v2 (Airflow 3.0+) |
 |---------|----------------------|----------------------|
-| **Total Tools** | **43 tools** | **45 tools** |
-| **Shared Tools** | 43 (100%) | 43 (96%) |
+| **Total Tools** | **54 tools** | **56 registered tools** |
+| **Shared Tools** | 54 (100%) | 54 (96%; includes 8 v1-only tools) |
 | **Exclusive Tools** | 0 | 2 (Asset Management) |
 | Basic DAG Operations | ✅ | ✅ Enhanced |
 | Task Management | ✅ | ✅ Enhanced |
@@ -345,6 +345,12 @@ REMOTE_SECRET_KEY=your-secure-secret-key-here
 | **Data-Aware Scheduling** | ❌ | ✅ **New** |
 | **Enhanced DAG Warnings** | ❌ | ✅ **New** |
 | **Advanced Filtering** | Basic | ✅ **Enhanced** |
+
+Counts refer to registered MCP tools. In API v2, eight registered tools
+(`list_users`, `get_user`, `list_permissions`, `list_roles`, `list_datasets`,
+`get_dataset`, `list_dataset_events`, and `get_dataset_events`) return an
+unsupported-operation response. Use `list_assets` and `list_asset_events`
+instead of dataset tools in v2.
 
 ---
 
@@ -678,6 +684,28 @@ This section provides comprehensive examples of how to use MCP-Airflow-API tools
 - **dag_task_duration**: "Show task durations for latest run of 'manual__xxxxx'."
 - **dag_calendar**: "Get calendar info for DAG 'example_complex' from last month."
 - **dag_calendar**: "Show DAG schedule for 'example_complex' from this week."
+
+### Additional Registered Tools
+
+| Category | Tool | Purpose | API support |
+|----------|------|---------|-------------|
+| Prompt template | `get_prompt_template` | Read the template or select a section with `section` | v1, v2 |
+| Connections | `list_connections` | List connections with `limit` and `offset` | v1, v2 |
+| Connections | `get_connection` | Read a connection by `connection_id` | v1, v2 |
+| Connections | `create_connection` | Create a connection from `connection_data` | v1, v2 |
+| Connections | `update_connection` | Update `connection_id` using `connection_data` | v1, v2 |
+| Connections | `delete_connection` | Delete a connection by `connection_id` | v1, v2 |
+| Users and permissions | `list_users` | List users with `limit` and `offset` | v1 only |
+| Users and permissions | `get_user` | Read a user by `username` | v1 only |
+| Users and permissions | `list_permissions` | List available permissions | v1 only |
+| Users and permissions | `list_roles` | List roles with `limit` and `offset` | v1 only |
+| Plugins and providers | `list_plugins` | List installed plugins | v1, v2 |
+| Plugins and providers | `list_providers` | List installed provider packages | v1, v2 |
+| Plugins and providers | `get_provider` | Read a provider by `provider_name` | v1, v2 |
+| Datasets | `list_datasets` | List datasets, optionally filtering by `uri_pattern` | v1 only |
+| Datasets | `get_dataset` | Read a dataset by `dataset_uri` | v1 only |
+| Datasets | `list_dataset_events` | Filter events by `dataset_uri` or `source_dag_id` | v1 only |
+| Datasets | `get_dataset_events` | List events for a specific `dataset_uri` | v1 only |
 
 ### Date Calculation Examples
 

@@ -1,7 +1,7 @@
 """
 Common tools shared between v1 and v2 APIs.
-Contains all 43 tools that work identically across versions.
-Only the API endpoint (v1 vs v2) differs - all business logic is identical.
+Registers 54 tools in both API versions.
+User, permission, role, and dataset operations are supported only in v1.
 """
 
 from typing import Any, Dict, List, Optional
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 airflow_request = None
 
 def register_common_tools(mcp):
-    """Register all 43 common tools that work with both v1 and v2 APIs."""
+    """Register 54 common tools, including operations supported only in v1."""
     
     if airflow_request is None:
         raise RuntimeError("airflow_request function must be set before registering common tools")
@@ -96,7 +96,23 @@ def register_common_tools(mcp):
         is_paused: Optional[bool] = None
     ) -> Dict[str, Any]:
         """
-        [Tool Role]: Retrieves detailed information for multiple DAGs in batch with latest run information.
+        [Tool Role]: Retrieves detailed information for multiple DAGs in batch with
+        latest run information.
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                100.
+            offset: Number of records to skip for pagination. Default: 0.
+            fetch_all: Fetch every DAG page; ignores limit and offset when
+                True. Default: False.
+            id_contains: Optional substring to match against DAG
+                identifiers. Default: None.
+            name_contains: Optional substring to match against DAG display
+                names. Default: None.
+            is_active: Optional active-status filter; None includes both
+                statuses. Default: None.
+            is_paused: Optional paused-status filter; None includes both
+                statuses. Default: None.
         """
         dag_list_result = await list_dags_internal(
             limit=limit, 
@@ -262,7 +278,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def trigger_dag(dag_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Triggers a new DAG run for a specified Airflow DAG."""
+        """
+        [Tool Role]: Triggers a new DAG run for a specified Airflow DAG.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         resp = await airflow_request("POST", f"/dags/{dag_id}/dagRuns", json={"conf": {}})
@@ -279,7 +301,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def pause_dag(dag_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Pauses the specified Airflow DAG (prevents scheduling new runs)."""
+        """
+        [Tool Role]: Pauses the specified Airflow DAG (prevents scheduling new runs).
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         resp = await airflow_request("PATCH", f"/dags/{dag_id}", json={"is_paused": True})
@@ -292,7 +320,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def unpause_dag(dag_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Unpauses the specified Airflow DAG (allows scheduling new runs)."""
+        """
+        [Tool Role]: Unpauses the specified Airflow DAG (allows scheduling new runs).
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         resp = await airflow_request("PATCH", f"/dags/{dag_id}", json={"is_paused": False})
@@ -305,7 +339,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def dag_graph(dag_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Retrieves task graph structure for the specified DAG."""
+        """
+        [Tool Role]: Retrieves task graph structure for the specified DAG.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         resp = await airflow_request("GET", f"/dags/{dag_id}/tasks")
@@ -337,7 +377,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def list_tasks(dag_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Lists all tasks within the specified DAG."""
+        """
+        [Tool Role]: Lists all tasks within the specified DAG.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         resp = await airflow_request("GET", f"/dags/{dag_id}/tasks")
@@ -346,7 +392,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def dag_code(dag_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Retrieves the source code for the specified DAG."""
+        """
+        [Tool Role]: Retrieves the source code for the specified DAG.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         resp = await airflow_request("GET", f"/dagSources/{dag_id}")
@@ -358,7 +410,16 @@ def register_common_tools(mcp):
     # Event/Log Management (3 tools)
     @mcp.tool()
     async def list_event_logs(dag_id: Optional[str] = None, limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists event logs from Airflow."""
+        """
+        [Tool Role]: Lists event logs from Airflow.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name. Default: None.
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         if dag_id:
             params['dag_id'] = dag_id
@@ -370,7 +431,12 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_event_log(event_log_id: int) -> Dict[str, Any]:
-        """[Tool Role]: Retrieves a specific event log entry."""
+        """
+        [Tool Role]: Retrieves a specific event log entry.
+
+        Args:
+            event_log_id: Numeric identifier of the event log entry.
+        """
         resp = await airflow_request("GET", f"/eventLogs/{event_log_id}")
         resp.raise_for_status()
         return resp.json()
@@ -402,7 +468,14 @@ def register_common_tools(mcp):
     # Import Error Management (3 tools)
     @mcp.tool()
     async def list_import_errors(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists import errors in Airflow."""
+        """
+        [Tool Role]: Lists import errors in Airflow.
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         resp = await airflow_request("GET", f"/importErrors?{query_string}")
@@ -411,7 +484,12 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_import_error(import_error_id: int) -> Dict[str, Any]:
-        """[Tool Role]: Retrieves a specific import error."""
+        """
+        [Tool Role]: Retrieves a specific import error.
+
+        Args:
+            import_error_id: Numeric identifier of the DAG import error.
+        """
         resp = await airflow_request("GET", f"/importErrors/{import_error_id}")
         resp.raise_for_status()
         return resp.json()
@@ -443,7 +521,15 @@ def register_common_tools(mcp):
     # Analysis/Statistics (3 tools)
     @mcp.tool()
     async def dag_run_duration(dag_id: str, limit: int = 10) -> Dict[str, Any]:
-        """[Tool Role]: Analyzes DAG run durations and performance metrics."""
+        """
+        [Tool Role]: Analyzes DAG run durations and performance metrics.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            limit: Maximum number of recent DAG runs to analyze (default:
+                10).
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         
@@ -484,7 +570,15 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def dag_task_duration(dag_id: str, dag_run_id: Optional[str] = None) -> Dict[str, Any]:
-        """[Tool Role]: Analyzes task durations within a DAG run."""
+        """
+        [Tool Role]: Analyzes task durations within a DAG run.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            dag_run_id: DAG run identifier; omitted or empty selects the
+                latest run.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         
@@ -527,7 +621,17 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def dag_calendar(dag_id: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """[Tool Role]: Shows DAG schedule and execution calendar for a date range."""
+        """
+        [Tool Role]: Shows DAG schedule and execution calendar for a date range.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            start_date: Inclusive run start-time lower bound in ISO 8601
+                format.
+            end_date: Inclusive run start-time upper bound in ISO 8601
+                format.
+        """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         
@@ -620,7 +724,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_config_section(section_name: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets all options within a specific configuration section."""
+        """
+        [Tool Role]: Gets all options within a specific configuration section.
+
+        Args:
+            section_name: Exact Airflow configuration section name, such as
+                core.
+        """
         try:
             resp = await airflow_request("GET", "/config")
             resp.raise_for_status()
@@ -643,7 +753,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def search_config_options(search_term: str) -> Dict[str, Any]:
-        """[Tool Role]: Searches for configuration options matching a term."""
+        """
+        [Tool Role]: Searches for configuration options matching a term.
+
+        Args:
+            search_term: Case-insensitive substring to find in option names
+                or values.
+        """
         try:
             resp = await airflow_request("GET", "/config")
             resp.raise_for_status()
@@ -673,7 +789,14 @@ def register_common_tools(mcp):
     # Pool Management (2 tools)
     @mcp.tool()
     async def list_pools(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists all pools in Airflow."""
+        """
+        [Tool Role]: Lists all pools in Airflow.
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         resp = await airflow_request("GET", f"/pools?{query_string}")
@@ -682,7 +805,12 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_pool(pool_name: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets details for a specific pool."""
+        """
+        [Tool Role]: Gets details for a specific pool.
+
+        Args:
+            pool_name: Exact Airflow pool name, such as default_pool.
+        """
         resp = await airflow_request("GET", f"/pools/{pool_name}")
         resp.raise_for_status()
         return resp.json()
@@ -706,7 +834,40 @@ def register_common_tools(mcp):
         limit: int = 100,
         offset: int = 0
     ) -> Dict[str, Any]:
-        """[Tool Role]: Lists task instances with comprehensive filtering options."""
+        """
+        [Tool Role]: Lists task instances with comprehensive filtering options.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name. Default: None.
+            dag_run_id: Exact DAG run identifier for the selected DAG.
+                Default: None.
+            task_id: Exact task identifier within the selected DAG. Default:
+                None.
+            execution_date_gte: Optional inclusive task execution time lower
+                bound, in ISO 8601 format. Default: None.
+            execution_date_lte: Optional inclusive task execution time upper
+                bound, in ISO 8601 format. Default: None.
+            start_date_gte: Optional inclusive task start time lower bound,
+                in ISO 8601 format. Default: None.
+            start_date_lte: Optional inclusive task start time upper bound,
+                in ISO 8601 format. Default: None.
+            end_date_gte: Optional inclusive task end time lower bound, in
+                ISO 8601 format. Default: None.
+            end_date_lte: Optional inclusive task end time upper bound, in
+                ISO 8601 format. Default: None.
+            duration_gte: Optional minimum task duration in seconds.
+                Default: None.
+            duration_lte: Optional maximum task duration in seconds.
+                Default: None.
+            state: Optional list of task states, such as ["failed",
+                "running"]. Default: None.
+            pool: Optional list of Airflow pool names to filter task
+                instances. Default: None.
+            limit: Maximum number of records to request per page. Default:
+                100.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         
         # Add all filter parameters
@@ -744,7 +905,15 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_task_instance_details(dag_id: str, dag_run_id: str, task_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets detailed information for a specific task instance."""
+        """
+        [Tool Role]: Gets detailed information for a specific task instance.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            dag_run_id: Exact DAG run identifier for the selected DAG.
+            task_id: Exact task identifier within the selected DAG.
+        """
         resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns/{dag_run_id}/taskInstances/{task_id}")
         resp.raise_for_status()
         return resp.json()
@@ -757,7 +926,20 @@ def register_common_tools(mcp):
         start_date_lte: Optional[str] = None,
         state: Optional[List[str]] = None
     ) -> Dict[str, Any]:
-        """[Tool Role]: Lists task instances in batch with date and state filtering."""
+        """
+        [Tool Role]: Lists task instances in batch with date and state filtering.
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                100.
+            offset: Number of records to skip for pagination. Default: 0.
+            start_date_gte: Optional inclusive task start time lower bound,
+                in ISO 8601 format. Default: None.
+            start_date_lte: Optional inclusive task start time upper bound,
+                in ISO 8601 format. Default: None.
+            state: Optional list of task states, such as ["failed",
+                "running"]. Default: None.
+        """
         params = {'limit': limit, 'offset': offset}
         
         if start_date_gte:
@@ -784,14 +966,32 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_task_instance_extra_links(dag_id: str, dag_run_id: str, task_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets extra links for a task instance."""
+        """
+        [Tool Role]: Gets extra links for a task instance.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            dag_run_id: Exact DAG run identifier for the selected DAG.
+            task_id: Exact task identifier within the selected DAG.
+        """
         resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns/{dag_run_id}/taskInstances/{task_id}/links")
         resp.raise_for_status()
         return resp.json()
 
     @mcp.tool()
     async def get_task_instance_logs(dag_id: str, dag_run_id: str, task_id: str, try_number: int = 1) -> Dict[str, Any]:
-        """[Tool Role]: Retrieves logs for a specific task instance."""
+        """
+        [Tool Role]: Retrieves logs for a specific task instance.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            dag_run_id: Exact DAG run identifier for the selected DAG.
+            task_id: Exact task identifier within the selected DAG.
+            try_number: Task attempt number whose logs to retrieve (default:
+                1). Default: 1.
+        """
         resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns/{dag_run_id}/taskInstances/{task_id}/logs/{try_number}")
         resp.raise_for_status()
         return resp.json()
@@ -799,7 +999,14 @@ def register_common_tools(mcp):
     # Variable Management (2 tools)
     @mcp.tool()
     async def list_variables(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists all variables in Airflow."""
+        """
+        [Tool Role]: Lists all variables in Airflow.
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         resp = await airflow_request("GET", f"/variables?{query_string}")
@@ -808,7 +1015,12 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_variable(variable_key: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets the value of a specific variable."""
+        """
+        [Tool Role]: Gets the value of a specific variable.
+
+        Args:
+            variable_key: Exact key of the Airflow variable.
+        """
         resp = await airflow_request("GET", f"/variables/{variable_key}")
         resp.raise_for_status()
         return resp.json()
@@ -816,7 +1028,18 @@ def register_common_tools(mcp):
     # XCom Management (2 tools)
     @mcp.tool()
     async def list_xcom_entries(dag_id: str, dag_run_id: str, task_id: str, limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists XCom entries for a specific task instance."""
+        """
+        [Tool Role]: Lists XCom entries for a specific task instance.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            dag_run_id: Exact DAG run identifier for the selected DAG.
+            task_id: Exact task identifier within the selected DAG.
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns/{dag_run_id}/taskInstances/{task_id}/xcomEntries?{query_string}")
@@ -825,7 +1048,16 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_xcom_entry(dag_id: str, dag_run_id: str, task_id: str, xcom_key: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets a specific XCom entry."""
+        """
+        [Tool Role]: Gets a specific XCom entry.
+
+        Args:
+            dag_id: Exact DAG identifier, as returned by list_dags; not its
+                display name.
+            dag_run_id: Exact DAG run identifier for the selected DAG.
+            task_id: Exact task identifier within the selected DAG.
+            xcom_key: Exact XCom key for the selected task instance.
+        """
         resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns/{dag_run_id}/taskInstances/{task_id}/xcomEntries/{xcom_key}")
         resp.raise_for_status()
         return resp.json()
@@ -833,7 +1065,14 @@ def register_common_tools(mcp):
     # Connection Management (5 tools)
     @mcp.tool()
     async def list_connections(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists all connections in Airflow."""
+        """
+        [Tool Role]: Lists all connections in Airflow.
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         params = {'limit': limit, 'offset': offset}
         query_string = "&".join([f"{k}={v}" for k, v in params.items()])
         resp = await airflow_request("GET", f"/connections?{query_string}")
@@ -842,28 +1081,55 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_connection(connection_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets details for a specific connection."""
+        """
+        [Tool Role]: Gets details for a specific connection.
+
+        Args:
+            connection_id: Exact Airflow connection identifier.
+        """
         resp = await airflow_request("GET", f"/connections/{connection_id}")
         resp.raise_for_status()
         return resp.json()
 
     @mcp.tool()
     async def create_connection(connection_data: Dict[str, Any]) -> Dict[str, Any]:
-        """[Tool Role]: Creates a new connection."""
+        """
+        [Tool Role]: Creates a new connection.
+
+        Args:
+            connection_data: Connection JSON body with connection_id and
+                conn_type; optional host, login, password, schema, port, and
+                extra fields. Obtain credentials from a secret store; do not
+                hardcode them.
+        """
         resp = await airflow_request("POST", "/connections", json=connection_data)
         resp.raise_for_status()
         return resp.json()
 
     @mcp.tool()
     async def update_connection(connection_id: str, connection_data: Dict[str, Any]) -> Dict[str, Any]:
-        """[Tool Role]: Updates an existing connection."""
+        """
+        [Tool Role]: Updates an existing connection.
+
+        Args:
+            connection_id: Exact Airflow connection identifier.
+            connection_data: Connection JSON body containing fields to
+                update, such as host, login, password, schema, port, or
+                extra. Obtain credentials from a secret store; do not
+                hardcode them.
+        """
         resp = await airflow_request("PATCH", f"/connections/{connection_id}", json=connection_data)
         resp.raise_for_status()
         return resp.json()
 
     @mcp.tool()
     async def delete_connection(connection_id: str) -> Dict[str, Any]:
-        """[Tool Role]: Deletes a connection."""
+        """
+        [Tool Role]: Deletes a connection.
+
+        Args:
+            connection_id: Exact Airflow connection identifier.
+        """
         resp = await airflow_request("DELETE", f"/connections/{connection_id}")
         resp.raise_for_status()
         return {"message": f"Connection {connection_id} deleted successfully"}
@@ -871,7 +1137,14 @@ def register_common_tools(mcp):
     # User & Permissions Management (4 tools) - v1 API only
     @mcp.tool()
     async def list_users(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists all users in the Airflow system (v1 API only)."""
+        """
+        [Tool Role]: Lists all users in the Airflow system (v1 API only).
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -892,7 +1165,12 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_user(username: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets details of a specific user (v1 API only)."""
+        """
+        [Tool Role]: Gets details of a specific user (v1 API only).
+
+        Args:
+            username: Exact Airflow username (API v1 only).
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -918,7 +1196,14 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def list_roles(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Lists all roles in the Airflow system (v1 API only)."""
+        """
+        [Tool Role]: Lists all roles in the Airflow system (v1 API only).
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -955,7 +1240,13 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_provider(provider_name: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets details of a specific provider package."""
+        """
+        [Tool Role]: Gets details of a specific provider package.
+
+        Args:
+            provider_name: Exact provider package name, such as apache-
+                airflow-providers-http.
+        """
         resp = await airflow_request("GET", f"/providers/{provider_name}")
         resp.raise_for_status()
         return resp.json()
@@ -963,7 +1254,17 @@ def register_common_tools(mcp):
     # Dataset Management (4 tools) - v1 API only (v2 uses Assets instead)
     @mcp.tool()
     async def list_datasets(limit: int = 20, offset: int = 0, uri_pattern: Optional[str] = None) -> Dict[str, Any]:
-        """[Tool Role]: Lists all datasets in the Airflow system (v1 API only - v2 uses Assets)."""
+        """
+        [Tool Role]: Lists all datasets in the Airflow system (v1 API only - v2 uses
+        Assets).
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+            uri_pattern: Optional dataset URI pattern passed to the API (v1
+                only). Default: None.
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -990,7 +1291,12 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_dataset(dataset_uri: str) -> Dict[str, Any]:
-        """[Tool Role]: Gets details of a specific dataset (v1 API only - v2 uses Assets)."""
+        """
+        [Tool Role]: Gets details of a specific dataset (v1 API only - v2 uses Assets).
+
+        Args:
+            dataset_uri: Dataset URI, such as s3://bucket/path; API v1 only.
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -1013,7 +1319,19 @@ def register_common_tools(mcp):
     async def list_dataset_events(limit: int = 20, offset: int = 0, 
                                  dataset_uri: Optional[str] = None,
                                  source_dag_id: Optional[str] = None) -> Dict[str, Any]:
-        """[Tool Role]: Lists dataset events for data lineage tracking (v1 API only - v2 uses Assets)."""
+        """
+        [Tool Role]: Lists dataset events for data lineage tracking (v1 API only - v2
+        uses Assets).
+
+        Args:
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+            dataset_uri: Dataset URI, such as s3://bucket/path; API v1 only.
+                Default: None.
+            source_dag_id: Optional identifier of the DAG that produced the
+                events. Default: None.
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -1042,7 +1360,15 @@ def register_common_tools(mcp):
 
     @mcp.tool()
     async def get_dataset_events(dataset_uri: str, limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-        """[Tool Role]: Gets events for a specific dataset (v1 API only - v2 uses Assets)."""
+        """
+        [Tool Role]: Gets events for a specific dataset (v1 API only - v2 uses Assets).
+
+        Args:
+            dataset_uri: Dataset URI, such as s3://bucket/path; API v1 only.
+            limit: Maximum number of records to request per page. Default:
+                20.
+            offset: Number of records to skip for pagination. Default: 0.
+        """
         from ..functions import get_api_version
         
         api_version = get_api_version()
@@ -1068,4 +1394,4 @@ def register_common_tools(mcp):
         resp.raise_for_status()
         return resp.json()
 
-    logger.info("Registered all common tools (56 tools total: 43 original + 13 new management tools)")
+    logger.info("Registered all common tools (54 tools; includes v1-only operations)")
