@@ -230,6 +230,24 @@ python -m mcp_airflow_api
 
 ---
 
+## Release Automation
+
+The GitHub Actions workflow `.github/workflows/pypi-publish.yml` runs when a
+tag is pushed. Only numeric `major.minor.patch` tags such as `3.7.0` are
+accepted, with no leading zeros in each component except `0` itself. Tags with
+a `v` prefix or prerelease suffix are rejected before publication. It tests and builds
+the package, checks that the wheel and source distribution versions match the
+tag, and publishes the same artifacts to TestPyPI, then PyPI. Both registries
+must have trusted publishing configured for this repository, workflow, and their
+respective `testpypi` and `pypi` GitHub environments.
+
+After both publications succeed, the workflow creates a GitHub Release named
+after the tag. Its notes include full commit messages since the most recently
+published release, in oldest-first topological order, plus a comparison link.
+The first release includes all commits reachable from the tag. The previous
+release must be an ancestor of the new tag. Existing published releases are
+preserved; existing drafts require manual review.
+
 ## 🛠️ Technical Advantages
 
 - **Leveraging Model Context Protocol (MCP)**  
