@@ -30,11 +30,10 @@ async def test_tool_documentation(
 
         for tool in tools:
             assert re.search(rf"\b{re.escape(tool.name)}\b", readme), tool.name
-            description = tool.description or ""
-            for parameter in tool.inputSchema.get("properties", {}):
-                assert re.search(
-                    rf"(?m)^\s+{re.escape(parameter)}:\s+\S", description
-                ), f"{tool.name}.{parameter} has no description"
+            for parameter, schema in tool.inputSchema.get("properties", {}).items():
+                assert schema.get("description", "").strip(), (
+                    f"{tool.name}.{parameter} has no description"
+                )
 
         prompt = await client.get_prompt("airflow_cluster_monitoring")
         content = prompt.messages[0].content
