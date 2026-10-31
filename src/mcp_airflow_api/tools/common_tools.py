@@ -5,10 +5,11 @@ User, permission, role, and dataset operations are supported only in v1.
 """
 
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote, urlencode
 from ..functions import (
     read_prompt_template, parse_prompt_sections, 
     get_current_time_context, list_dags_internal, get_dag_detailed_info, 
-    PROMPT_TEMPLATE_PATH
+    PROMPT_TEMPLATE_PATH, get_api_version
 )
 import logging
 
@@ -844,10 +845,10 @@ def register_common_tools(mcp):
                 Default: None.
             task_id: Exact task identifier within the selected DAG. Default:
                 None.
-            execution_date_gte: Optional inclusive task execution time lower
-                bound, in ISO 8601 format. Default: None.
-            execution_date_lte: Optional inclusive task execution time upper
-                bound, in ISO 8601 format. Default: None.
+            execution_date_gte: Optional inclusive execution date (v1) or
+                logical date (v2) lower bound, in ISO 8601 format. Default: None.
+            execution_date_lte: Optional inclusive execution date (v1) or
+                logical date (v2) upper bound, in ISO 8601 format. Default: None.
             start_date_gte: Optional inclusive task start time lower bound,
                 in ISO 8601 format. Default: None.
             start_date_lte: Optional inclusive task start time upper bound,
@@ -870,17 +871,14 @@ def register_common_tools(mcp):
         """
         params = {'limit': limit, 'offset': offset}
         
-        # Add all filter parameters
-        if dag_id:
-            params['dag_id'] = dag_id
-        if dag_run_id:
-            params['dag_run_id'] = dag_run_id
+        api_version = get_api_version()
+        date_prefix = "logical_date" if api_version == "v2" else "execution_date"
         if task_id:
             params['task_id'] = task_id
         if execution_date_gte:
-            params['execution_date_gte'] = execution_date_gte
+            params[f'{date_prefix}_gte'] = execution_date_gte
         if execution_date_lte:
-            params['execution_date_lte'] = execution_date_lte
+            params[f'{date_prefix}_lte'] = execution_date_lte
         if start_date_gte:
             params['start_date_gte'] = start_date_gte
         if start_date_lte:
@@ -889,17 +887,39 @@ def register_common_tools(mcp):
             params['end_date_gte'] = end_date_gte
         if end_date_lte:
             params['end_date_lte'] = end_date_lte
-        if duration_gte:
+        if duration_gte is not None:
             params['duration_gte'] = duration_gte
-        if duration_lte:
+        if duration_lte is not None:
             params['duration_lte'] = duration_lte
         if state:
             params['state'] = state
         if pool:
             params['pool'] = pool
         
-        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-        resp = await airflow_request("GET", f"/taskInstances?{query_string}")
+        # v1 GET cannot filter task IDs; v2 GET requires a DAG for a specific run.
+        if (api_version == "v1" and task_id) or (
+            api_version == "v2"
+            and dag_run_id and dag_run_id != "~"
+            and (not dag_id or dag_id == "~")
+        ):
+            params['page_limit'] = params.pop('limit')
+            params['page_offset'] = params.pop('offset')
+            params.pop('task_id', None)
+            for key, value in (
+                ('dag_ids', dag_id), ('dag_run_ids', dag_run_id), ('task_ids', task_id)
+            ):
+                if value and value != "~":
+                    params[key] = [value]
+            resp = await airflow_request(
+                "POST", "/dags/~/dagRuns/~/taskInstances/list", json=params
+            )
+        else:
+            path = (
+                f"/dags/{quote(dag_id or '~', safe='')}/dagRuns/"
+                f"{quote(dag_run_id or '~', safe='')}/taskInstances"
+            )
+            query_string = urlencode(params, doseq=True)
+            resp = await airflow_request("GET", f"{path}?{query_string}")
         resp.raise_for_status()
         return resp.json()
 
@@ -949,8 +969,8 @@ def register_common_tools(mcp):
         if state:
             params['state'] = state
         
-        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-        resp = await airflow_request("GET", f"/taskInstances?{query_string}")
+        query_string = urlencode(params, doseq=True)
+        resp = await airflow_request("GET", f"/dags/~/dagRuns/~/taskInstances?{query_string}")
         resp.raise_for_status()
         data = resp.json()
         

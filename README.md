@@ -631,6 +631,14 @@ This section provides comprehensive examples of how to use MCP-Airflow-API tools
 - **get_variable**: "Show the value of variable 'api_key'."
 
 ### Task Instance Management
+
+`list_task_instances_all` and `list_task_instances_batch` return one page using
+`limit` and `offset`. Omitted DAG and run IDs select all DAGs and runs.
+The `execution_date_gte/lte` arguments filter execution dates in v1 and logical
+dates in v2. State and pool lists match any supplied value.
+The batch tool adds `state_summary` for the returned page.
+On Airflow 2.x, filtering by `task_id` requires Airflow 2.7.1 or later.
+
 - **list_task_instances_all**: "List all task instances for DAG 'example_complex'."
 - **list_task_instances_all**: "Show running task instances."
 - **list_task_instances_all**: "Show task instances filtered by pool 'default_pool'."
