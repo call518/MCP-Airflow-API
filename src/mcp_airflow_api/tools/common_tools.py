@@ -288,14 +288,18 @@ def register_common_tools(mcp):
         """
         if not dag_id:
             raise ValueError("dag_id must not be empty")
-        resp = await airflow_request("POST", f"/dags/{dag_id}/dagRuns", json={"conf": {}})
+        # v2 requires logical_date in the body; null triggers a run now.
+        is_v2 = get_api_version() == "v2"
+        body = {"conf": {}, "logical_date": None} if is_v2 else {"conf": {}}
+        date_key = "logical_date" if is_v2 else "execution_date"
+        resp = await airflow_request("POST", f"/dags/{dag_id}/dagRuns", json=body)
         resp.raise_for_status()
         run = resp.json()
         return {
             "dag_id": dag_id,
             "run_id": run.get("run_id"),
             "state": run.get("state"),
-            "execution_date": run.get("execution_date"),
+            "execution_date": run.get(date_key),
             "start_date": run.get("start_date"),
             "end_date": run.get("end_date")
         }
