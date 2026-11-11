@@ -36,26 +36,26 @@
   "user_config": {
     "airflow_api_version": {
       "type": "string",
-      "title": "Airflow API version",
+      "title": "Airflow API version (AIRFLOW_API_VERSION)",
       "description": "Use v1 for Airflow 2.x or v2 for Airflow 3.x",
       "default": "v1",
       "required": true
     },
     "airflow_api_base_url": {
       "type": "string",
-      "title": "Airflow API base URL",
+      "title": "Airflow API base URL (AIRFLOW_API_BASE_URL)",
       "description": "Base URL without the API version, for example http://localhost:8080/api",
       "required": true
     },
     "airflow_api_username": {
       "type": "string",
-      "title": "Airflow user name",
+      "title": "Airflow user name (AIRFLOW_API_USERNAME)",
       "description": "User name used to authenticate with the Airflow REST API",
       "required": true
     },
     "airflow_api_password": {
       "type": "string",
-      "title": "Airflow password",
+      "title": "Airflow password (AIRFLOW_API_PASSWORD)",
       "description": "Stored securely by Claude Desktop",
       "sensitive": true,
       "required": true
