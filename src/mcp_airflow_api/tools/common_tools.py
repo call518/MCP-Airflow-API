@@ -9,7 +9,7 @@ from urllib.parse import quote, urlencode
 from ..functions import (
     read_prompt_template, parse_prompt_sections, 
     get_current_time_context, list_dags_internal, get_dag_detailed_info, 
-    PROMPT_TEMPLATE_PATH, get_api_version
+    PROMPT_TEMPLATE_PATH, get_api_version, dag_run_date_field, summarize_dag_run
 )
 import logging
 
@@ -147,25 +147,12 @@ def register_common_tools(mcp):
                 detailed_dag = await get_dag_detailed_info(dag_id)
                 
                 try:
-                    latest_run_resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns?limit=1&order_by=-execution_date")
+                    latest_run_resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns?limit=1&order_by=-{dag_run_date_field()}")
                     latest_run_resp.raise_for_status()
                     latest_runs = latest_run_resp.json().get("dag_runs", [])
-                
+
                     if latest_runs:
-                        latest_run = latest_runs[0]
-                        detailed_dag["latest_dag_run"] = {
-                            "run_id": latest_run.get("run_id"),
-                            "run_type": latest_run.get("run_type"),
-                            "state": latest_run.get("state"),
-                            "execution_date": latest_run.get("execution_date"),
-                            "start_date": latest_run.get("start_date"),
-                            "end_date": latest_run.get("end_date"),
-                            "data_interval_start": latest_run.get("data_interval_start"),
-                            "data_interval_end": latest_run.get("data_interval_end"),
-                            "external_trigger": latest_run.get("external_trigger"),
-                            "conf": latest_run.get("conf"),
-                            "note": latest_run.get("note")
-                        }
+                        detailed_dag["latest_dag_run"] = summarize_dag_run(latest_runs[0])
                     else:
                         detailed_dag["latest_dag_run"] = None
                 except Exception:
@@ -217,17 +204,7 @@ def register_common_tools(mcp):
             run_info = {
                 "dag_id": run.get("dag_id"),
                 "dag_display_name": run.get("dag_display_name"),
-                "run_id": run.get("run_id"),
-                "run_type": run.get("run_type"),
-                "state": run.get("state"),
-                "execution_date": run.get("execution_date"),
-                "start_date": run.get("start_date"),
-                "end_date": run.get("end_date"),
-                "data_interval_start": run.get("data_interval_start"),
-                "data_interval_end": run.get("data_interval_end"),
-                "external_trigger": run.get("external_trigger"),
-                "conf": run.get("conf"),
-                "note": run.get("note")
+                **summarize_dag_run(run)
             }
             running_runs.append(run_info)
     
@@ -253,17 +230,7 @@ def register_common_tools(mcp):
             run_info = {
                 "dag_id": run.get("dag_id"),
                 "dag_display_name": run.get("dag_display_name"),
-                "run_id": run.get("run_id"),
-                "run_type": run.get("run_type"),
-                "state": run.get("state"),
-                "execution_date": run.get("execution_date"),
-                "start_date": run.get("start_date"),
-                "end_date": run.get("end_date"),
-                "data_interval_start": run.get("data_interval_start"),
-                "data_interval_end": run.get("data_interval_end"),
-                "external_trigger": run.get("external_trigger"),
-                "conf": run.get("conf"),
-                "note": run.get("note")
+                **summarize_dag_run(run)
             }
             failed_runs.append(run_info)
     
@@ -291,15 +258,14 @@ def register_common_tools(mcp):
         # v2 requires logical_date in the body; null triggers a run now.
         is_v2 = get_api_version() == "v2"
         body = {"conf": {}, "logical_date": None} if is_v2 else {"conf": {}}
-        date_key = "logical_date" if is_v2 else "execution_date"
         resp = await airflow_request("POST", f"/dags/{dag_id}/dagRuns", json=body)
         resp.raise_for_status()
         run = resp.json()
         return {
             "dag_id": dag_id,
-            "run_id": run.get("run_id"),
+            "run_id": run.get("dag_run_id"),
             "state": run.get("state"),
-            "execution_date": run.get(date_key),
+            "execution_date": run.get(dag_run_date_field()),
             "start_date": run.get("start_date"),
             "end_date": run.get("end_date")
         }
@@ -359,15 +325,20 @@ def register_common_tools(mcp):
         
         tasks = tasks_data.get("tasks", [])
         task_graph = {}
-        
+
         for task in tasks:
             task_id = task.get("task_id")
             task_graph[task_id] = {
                 "task_id": task_id,
                 "task_type": task.get("class_ref", {}).get("class_name"),
                 "downstream_task_ids": task.get("downstream_task_ids", []),
-                "upstream_task_ids": task.get("upstream_task_ids", [])
+                "upstream_task_ids": []
             }
+        # The API returns only downstream links; derive upstream links from them.
+        for task_id, task_info in task_graph.items():
+            for downstream_id in task_info["downstream_task_ids"]:
+                if downstream_id in task_graph:
+                    task_graph[downstream_id]["upstream_task_ids"].append(task_id)
         
         return {
             "dag_id": dag_id,
@@ -512,9 +483,9 @@ def register_common_tools(mcp):
             if filename not in import_summary:
                 import_summary[filename] = []
             import_summary[filename].append({
-                "id": error.get("id"),
+                "id": error.get("import_error_id"),
                 "timestamp": error.get("timestamp"),
-                "stacktrace": error.get("stacktrace", "")[:200] + "..."
+                "stacktrace": (error.get("stack_trace") or "")[:200] + "..."
             })
         
         return {
@@ -538,7 +509,7 @@ def register_common_tools(mcp):
         if not dag_id:
             raise ValueError("dag_id must not be empty")
         
-        resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns?limit={limit}&order_by=-execution_date")
+        resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns?limit={limit}&order_by=-{dag_run_date_field()}")
         resp.raise_for_status()
         data = resp.json()
         
@@ -554,10 +525,10 @@ def register_common_tools(mcp):
                 end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
                 duration_seconds = (end - start).total_seconds()
                 durations.append({
-                    "run_id": run.get("run_id"),
+                    "run_id": run.get("dag_run_id"),
                     "duration_seconds": duration_seconds,
                     "state": run.get("state"),
-                    "execution_date": run.get("execution_date")
+                    "execution_date": run.get(dag_run_date_field())
                 })
         
         avg_duration = sum(d["duration_seconds"] for d in durations) / len(durations) if durations else 0
@@ -589,12 +560,12 @@ def register_common_tools(mcp):
         
         if not dag_run_id:
             # Get the latest run
-            resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns?limit=1&order_by=-execution_date")
+            resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns?limit=1&order_by=-{dag_run_date_field()}")
             resp.raise_for_status()
             runs = resp.json().get("dag_runs", [])
             if not runs:
                 return {"error": f"No DAG runs found for DAG {dag_id}"}
-            dag_run_id = runs[0]["run_id"]
+            dag_run_id = runs[0]["dag_run_id"]
         
         resp = await airflow_request("GET", f"/dags/{dag_id}/dagRuns/{dag_run_id}/taskInstances")
         resp.raise_for_status()
@@ -654,7 +625,7 @@ def register_common_tools(mcp):
         calendar_data = []
         for run in data.get("dag_runs", []):
             calendar_data.append({
-                "execution_date": run.get("execution_date"),
+                "execution_date": run.get(dag_run_date_field()),
                 "start_date": run.get("start_date"),
                 "end_date": run.get("end_date"),
                 "state": run.get("state"),

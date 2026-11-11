@@ -27,7 +27,7 @@ async def test_trigger_dag_body_and_date(monkeypatch, version, body, date_key):
     server = create_mcp_server()
     response = Mock()
     response.json.return_value = {
-        "run_id": "manual__1",
+        "dag_run_id": "manual__1",
         "state": "queued",
         date_key: "2026-11-12T00:00:00+00:00",
     }

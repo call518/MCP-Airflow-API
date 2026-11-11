@@ -62,6 +62,46 @@ def get_api_version():
     """Get API version from environment."""
     return os.getenv("AIRFLOW_API_VERSION", "v1").lower()
 
+def dag_run_date_field() -> str:
+    """Return the DAG run date field name for the configured API version."""
+    return "logical_date" if get_api_version() == "v2" else "execution_date"
+
+def summarize_dag_run(run: Dict[str, Any]) -> Dict[str, Any]:
+    """Map a v1 or v2 DAG run response to this server's output fields."""
+    if get_api_version() == "v2":
+        # v2 removed external_trigger; manual runs are the external triggers.
+        external_trigger = run.get("run_type") == "manual"
+    else:
+        external_trigger = run.get("external_trigger")
+    return {
+        "run_id": run.get("dag_run_id"),
+        "run_type": run.get("run_type"),
+        "state": run.get("state"),
+        "execution_date": run.get(dag_run_date_field()),
+        "start_date": run.get("start_date"),
+        "end_date": run.get("end_date"),
+        "data_interval_start": run.get("data_interval_start"),
+        "data_interval_end": run.get("data_interval_end"),
+        "external_trigger": external_trigger,
+        "conf": run.get("conf"),
+        "note": run.get("note")
+    }
+
+def version_dag_fields(dag: Dict[str, Any]) -> Dict[str, Any]:
+    """Return DAG fields whose names differ between API v1 and v2."""
+    if get_api_version() != "v2":
+        return {
+            "is_active": dag.get("is_active"),
+            "schedule_interval": dag.get("schedule_interval"),
+            "next_dagrun": dag.get("next_dagrun")
+        }
+    is_stale = dag.get("is_stale")
+    return {
+        "is_active": None if is_stale is None else not is_stale,
+        "schedule_interval": dag.get("timetable_summary"),
+        "next_dagrun": dag.get("next_dagrun_logical_date")
+    }
+
 def construct_api_url(path: str) -> str:
     """Construct full API URL with version."""
     base_url = get_api_base_url()
@@ -359,8 +399,9 @@ async def list_dags_internal(limit: int = 20,
     dags = response_data.get("dags", [])
     dag_list = []
     for dag in dags:
+        version_fields = version_dag_fields(dag)
         # Extract schedule interval info
-        schedule_info = dag.get("schedule_interval")
+        schedule_info = version_fields["schedule_interval"]
         if isinstance(schedule_info, dict) and schedule_info.get("__type") == "CronExpression":
             schedule_display = schedule_info.get("value", "Unknown")
         elif schedule_info:
@@ -372,14 +413,14 @@ async def list_dags_internal(limit: int = 20,
             "dag_id": dag.get("dag_id"),
             "dag_display_name": dag.get("dag_display_name"),
             "description": dag.get("description"),
-            "is_active": dag.get("is_active"),
+            "is_active": version_fields["is_active"],
             "is_paused": dag.get("is_paused"),
             "schedule_interval": schedule_display,
             "max_active_runs": dag.get("max_active_runs"),
             "max_active_tasks": dag.get("max_active_tasks"),
             "owners": dag.get("owners"),
             "tags": [t.get("name") for t in dag.get("tags", [])],
-            "next_dagrun": dag.get("next_dagrun"),
+            "next_dagrun": version_fields["next_dagrun"],
             "next_dagrun_data_interval_start": dag.get("next_dagrun_data_interval_start"),
             "next_dagrun_data_interval_end": dag.get("next_dagrun_data_interval_end"),
             "last_parsed_time": dag.get("last_parsed_time"),
@@ -420,17 +461,19 @@ async def get_dag_detailed_info(dag_id: str) -> Dict[str, Any]:
     """
     if not dag_id:
         raise ValueError("dag_id must not be empty")
-    resp = await airflow_request("GET", f"/dags/{dag_id}")
+    # start_date, end_date, and catchup exist only in the details response.
+    resp = await airflow_request("GET", f"/dags/{dag_id}/details")
     resp.raise_for_status()
     dag = resp.json()
+    version_fields = version_dag_fields(dag)
     return {
         "dag_id": dag.get("dag_id"),
         "dag_display_name": dag.get("dag_display_name"),
         "description": dag.get("description"),
-        "schedule_interval": dag.get("schedule_interval"),
+        "schedule_interval": version_fields["schedule_interval"],
         "start_date": dag.get("start_date"),
         "end_date": dag.get("end_date"),
-        "is_active": dag.get("is_active"),
+        "is_active": version_fields["is_active"],
         "is_paused": dag.get("is_paused"),
         "owners": dag.get("owners"),
         "tags": [t.get("name") for t in dag.get("tags", [])],
@@ -439,7 +482,7 @@ async def get_dag_detailed_info(dag_id: str) -> Dict[str, Any]:
         "max_active_tasks": dag.get("max_active_tasks"),
         "has_task_concurrency_limits": dag.get("has_task_concurrency_limits"),
         "has_import_errors": dag.get("has_import_errors"),
-        "next_dagrun": dag.get("next_dagrun"),
+        "next_dagrun": version_fields["next_dagrun"],
         "next_dagrun_data_interval_start": dag.get("next_dagrun_data_interval_start"),
         "next_dagrun_data_interval_end": dag.get("next_dagrun_data_interval_end")
     }
