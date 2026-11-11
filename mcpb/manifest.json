@@ -1,0 +1,68 @@
+{
+  "manifest_version": "0.4",
+  "name": "mcp-airflow-api",
+  "display_name": "Airflow API",
+  "version": "0.0.0",
+  "description": "Inspect and operate Apache Airflow through its REST API.",
+  "long_description": "Runs MCP-Airflow-API locally over stdio. Choose the Airflow API version and enter the target cluster URL and credentials in Claude Desktop.",
+  "author": {
+    "name": "JungJungIn",
+    "url": "https://github.com/call518"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/call518/MCP-Airflow-API"
+  },
+  "homepage": "https://github.com/call518/MCP-Airflow-API",
+  "documentation": "https://github.com/call518/MCP-Airflow-API#claude-desktop-integration",
+  "support": "https://github.com/call518/MCP-Airflow-API/issues",
+  "license": "MIT",
+  "keywords": ["airflow", "workflow", "operations", "monitoring"],
+  "server": {
+    "type": "uv",
+    "entry_point": "server.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": ["run", "--directory", "${__dirname}", "server.py"],
+      "env": {
+        "SETUPTOOLS_SCM_PRETEND_VERSION": "0.0.0",
+        "AIRFLOW_API_VERSION": "${user_config.airflow_api_version}",
+        "AIRFLOW_API_BASE_URL": "${user_config.airflow_api_base_url}",
+        "AIRFLOW_API_USERNAME": "${user_config.airflow_api_username}",
+        "AIRFLOW_API_PASSWORD": "${user_config.airflow_api_password}"
+      }
+    }
+  },
+  "user_config": {
+    "airflow_api_version": {
+      "type": "string",
+      "title": "Airflow API version",
+      "description": "Use v1 for Airflow 2.x or v2 for Airflow 3.x",
+      "default": "v1",
+      "required": true
+    },
+    "airflow_api_base_url": {
+      "type": "string",
+      "title": "Airflow API base URL",
+      "description": "Base URL without the API version, for example http://localhost:8080/api",
+      "required": true
+    },
+    "airflow_api_username": {
+      "type": "string",
+      "title": "Airflow user name",
+      "description": "User name used to authenticate with the Airflow REST API",
+      "required": true
+    },
+    "airflow_api_password": {
+      "type": "string",
+      "title": "Airflow password",
+      "description": "Stored securely by Claude Desktop",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {"python": ">=3.12"}
+  }
+}

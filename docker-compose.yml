@@ -1,14 +1,14 @@
 services:
   open-webui:
     env_file: .env
-    # image: ghcr.io/open-webui/open-webui:main
-    # image: ghcr.io/open-webui/open-webui:0.6.22
-    image: ghcr.io/open-webui/open-webui:0.7.2
+    image: ghcr.io/open-webui/open-webui:0.13.2
     container_name: mcp-airflow-api-open-webui
     ports:
-      - "${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - DEFAULT_MODEL_PARAMS=${DEFAULT_MODEL_PARAMS}
     volumes:
       - open-webui-data:/app/backend/data
     extra_hosts:
@@ -17,10 +17,10 @@ services:
 
   mcp-server:
     env_file: .env
-    image: call518/mcp-server-airflow-api:1.0.1
+    image: call518/mcp-server-airflow-api:1.0.2
     container_name: mcp-airflow-api-mcp-server
     ports:
-      - "${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8000" ### (WARNING) Must be same with port number of 'FASTMCP_PORT', 'mcp-config.json' and 'mcp-config.json.http'
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_MCP_SERVER}:8000"
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts
@@ -37,15 +37,15 @@ services:
 
   mcpo-proxy:
     env_file: .env
-    image: call518/mcpo-proxy-airflow-api:1.0.3
+    image: call518/mcpo-proxy-airflow-api:1.0.4
     container_name: mcp-airflow-api-mcpo-proxy
     depends_on:
       mcp-server:
         condition: service_healthy
     ports:
-      - "${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
+      - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_MCPO_PROXY}:8000"
     volumes:
-      - ./mcp-config.json.http:/app/config/mcp-config.json
+      - ./${MCPO_CONFIG_FILE:-mcp-config.json.http.local}:/app/config/mcp-config.json:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

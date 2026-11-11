@@ -47,6 +47,18 @@ jobs:
           path: dist/
           if-no-files-found: error
 
+      - name: Build Claude Desktop Bundle
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: scripts/build-mcpb.sh "$RELEASE_TAG" mcpb-dist
+
+      - name: Upload Claude Desktop Bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: mcpb
+          path: mcpb-dist/
+          if-no-files-found: error
+
   publish-to-testpypi:
     name: Publish to TestPyPI
     needs: build
@@ -108,5 +120,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Download Claude Desktop Bundle
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: mcpb
+          path: mcpb-dist/
+
       - name: Publish Release with Commit Messages
-        run: python3 -m scripts.publish_release "$RELEASE_TAG"
+        run: python3 -m scripts.publish_release "$RELEASE_TAG" mcpb-dist/*.mcpb

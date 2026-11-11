@@ -92,6 +92,7 @@ This MCP server provides natural language tools for managing Apache Airflow clus
 
 | Tool Name           | Role/Description                          | Input Args                    | Output Fields                        |
 |---------------------|-------------------------------------------|-------------------------------|--------------------------------------|
+| get_prompt_template | Return this tool guide, its headings, or one section | section, mode | Prompt text or section headings |
 | **Basic DAG Management** |                                     |                               |                                      |
 | list_dags           | List DAGs with pagination or all with fetch_all | limit (int), offset (int), fetch_all (bool) | dag_id, dag_display_name, is_active, is_paused, owners, tags, total_entries, has_more_pages, next_offset, pagination_info |
 | running_dags        | List running DAG runs                     | None                          | dag_id, run_id, state, execution_date, start_date, end_date |

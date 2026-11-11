@@ -63,8 +63,12 @@ def test_release_notes(monkeypatch: pytest.MonkeyPatch, previous: str | None) ->
 
 
 @pytest.mark.parametrize("existing", [False, True])
-def test_publish_release(monkeypatch: pytest.MonkeyPatch, existing: bool) -> None:
+def test_publish_release(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, existing: bool
+) -> None:
     created = []
+    asset = tmp_path / "mcp-airflow-api-3.7.0.mcpb"
+    asset.write_bytes(b"bundle")
 
     def command(*args: str) -> str:
         if args[:2] == ("git", "rev-parse"):
@@ -81,7 +85,23 @@ def test_publish_release(monkeypatch: pytest.MonkeyPatch, existing: bool) -> Non
 
     monkeypatch.setattr(publisher, "command", command)
     monkeypatch.setattr(publisher, "release_notes", lambda *args: "notes")
-    publisher.publish_release("call518/MCP-Airflow-API", "3.7.0")
+    publisher.publish_release("call518/MCP-Airflow-API", "3.7.0", [asset])
     assert len(created) == (0 if existing else 1)
     if created:
         assert "--prerelease" not in created[0]
+        assert str(asset) in created[0]
+
+
+def test_publish_release_rejects_missing_asset(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        publisher,
+        "command",
+        lambda *args: json.dumps([[]]) if "--paginate" in args else "current",
+    )
+    monkeypatch.setattr(publisher, "release_notes", lambda *args: "notes")
+    with pytest.raises(ValueError, match="Release assets do not exist"):
+        publisher.publish_release(
+            "call518/MCP-Airflow-API", "3.7.0", [tmp_path / "missing.mcpb"]
+        )

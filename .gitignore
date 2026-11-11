@@ -16,4 +16,7 @@ wheels/
 
 # Environment files
 .env
+.env.*
+!.env.example
+mcp-config.json.*.local
 *.swp

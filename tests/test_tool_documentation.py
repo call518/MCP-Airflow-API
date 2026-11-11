@@ -22,14 +22,20 @@ async def test_tool_documentation(
 ) -> None:
     """Every registered tool and parameter has client-visible documentation."""
     monkeypatch.setenv("AIRFLOW_API_VERSION", api_version)
-    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text()
+    root = Path(__file__).resolve().parents[1]
+    documentation = "\n".join(
+        (
+            (root / "README.md").read_text(),
+            (root / "src/mcp_airflow_api/prompt_template.md").read_text(),
+        )
+    )
 
     async with Client(create_mcp_server()) as client:
         tools = await client.list_tools()
         assert len(tools) == expected_count
 
         for tool in tools:
-            assert re.search(rf"\b{re.escape(tool.name)}\b", readme), tool.name
+            assert re.search(rf"\b{re.escape(tool.name)}\b", documentation), tool.name
             for parameter, schema in tool.inputSchema.get("properties", {}).items():
                 assert schema.get("description", "").strip(), (
                     f"{tool.name}.{parameter} has no description"
