@@ -7,8 +7,6 @@ services:
       - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${DOCKER_EXTERNAL_PORT_OPENWEBUI}:8080"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
-      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
-      - DEFAULT_MODEL_PARAMS=${DEFAULT_MODEL_PARAMS}
     volumes:
       - open-webui-data:/app/backend/data
     extra_hosts:
