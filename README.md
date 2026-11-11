@@ -56,8 +56,10 @@ remote alternatives.
 
 ### Option B: OpenWebUI with Docker Compose
 
-Requirements: Git, Docker with the Compose plugin, and a model provider whose
-model supports tool calling.
+Requirements: Git, Docker with the Compose plugin, and a model provider for
+OpenWebUI whose model supports tool calling.
+
+**1. Configure**
 
 ```bash
 git clone https://github.com/call518/MCP-Airflow-API.git
@@ -65,9 +67,15 @@ cd MCP-Airflow-API
 cp .env.example .env
 cp mcp-config.json.http mcp-config.json.http.local
 chmod 600 mcp-config.json.http.local
-# Edit .env for your Airflow cluster, then start the stack.
+openssl rand -hex 32   # use the output as WEBUI_SECRET_KEY
+vi .env                # set WEBUI_SECRET_KEY and the AIRFLOW_* values
+```
+
+**2. Start**
+
+```bash
 docker compose up -d
-docker compose ps
+docker compose ps      # wait until mcp-server is healthy
 ```
 
 The default stack exposes only localhost:
@@ -76,21 +84,45 @@ The default stack exposes only localhost:
 - MCP server: `http://localhost:18002/mcp`
 - Optional MCPO/OpenAPI proxy: `http://localhost:8002`
 
-In OpenWebUI, add an external tool server of type **MCP (Streamable HTTP)**
-with the internal Docker URL `http://mcp-server:8000/mcp`. Do not use the host
-URL from inside the Docker network.
+**3. Connect a model provider**
 
-OpenWebUI connects directly to MCP; MCPO is optional and exists for OpenAPI
-clients. Start without it using:
+These steps apply to both the direct MCP connection and MCPO.
 
-```bash
-docker compose up -d mcp-server open-webui
-```
+1. Open `http://localhost:3002` and create the administrator account.
+2. Under **Settings → Admin → Connections**, add an OpenAI connection with URL
+   `https://api.openai.com/v1`, **Auth** `Bearer` with your OpenAI API key, and
+   **API Type** set to **Chat Completions**, then save it. For another provider,
+   see the [OpenWebUI guide](docs/openwebui-guide.md#connect-a-model-provider).
+3. The Quick Start calls tools through Chat Completions with model reasoning
+   turned off, using this default already present in `.env.example`:
 
-The example enables `reasoning_effort: none` globally to avoid tool-call errors
-with some reasoning models. Existing OpenWebUI volumes retain their saved model
-settings. See the [OpenWebUI guide](docs/openwebui-guide.md) for exact menus,
-MCPO setup, authentication, and troubleshooting.
+   ```dotenv
+   DEFAULT_MODEL_PARAMS={"reasoning_effort":"none"}
+   ```
+
+   This value requires **API Type: Chat Completions**. With **Responses**,
+   OpenWebUI still sends `reasoning_effort`, and every request fails with
+   `Unsupported parameter: 'reasoning_effort'`. If the `open-webui-data` volume
+   already exists, set the same value under **Settings → Admin → Models → Model
+   Defaults → Model Parameters** because its saved database value takes
+   precedence. To keep model reasoning through **Responses** instead, see the
+   [OpenWebUI guide](docs/openwebui-guide.md#openai-api-type-and-reasoning-models).
+
+**4. Connect the MCP server**
+
+1. Under **Settings → Admin → Tools → Integrations → External Tool Servers**,
+   add a connection of type **MCP (Streamable HTTP)** with the internal Docker
+   URL `http://mcp-server:8000/mcp` and authentication `None`. Do not use the
+   host URL from inside the Docker network.
+2. In a new chat, enable the connection under **Integrations → Tools** and ask:
+   `Use mcp-airflow-api to show the Airflow cluster health.`
+
+> **MCPO is optional.** OpenWebUI connects directly to MCP; MCPO exists for
+> OpenAPI clients. Start without it using
+> `docker compose up -d mcp-server open-webui`.
+
+See the [OpenWebUI guide](docs/openwebui-guide.md) for MCPO setup,
+authentication, OpenAI reasoning models, and troubleshooting.
 
 ### Other installation methods
 
@@ -146,7 +178,7 @@ configured account's permissions.
 | Guide | Contents |
 |---|---|
 | [Claude Desktop](docs/claude-desktop-guide.md) | MCPB, `uvx`, source, and remote connections |
-| [OpenWebUI](docs/openwebui-guide.md) | Direct MCP, optional MCPO, reasoning models, troubleshooting |
+| [OpenWebUI](docs/openwebui-guide.md) | Model provider, direct MCP, optional MCPO, OpenAI API type and reasoning models, troubleshooting |
 | [Configuration and security](docs/configuration.md) | Environment variables, ports, Bearer authentication |
 | [API coverage](api_coverage_analysis.md) | Detailed tool and Airflow endpoint coverage |
 | [Prompt and tool catalog](src/mcp_airflow_api/prompt_template.md) | Registered tools and example requests |
