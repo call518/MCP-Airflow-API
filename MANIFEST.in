@@ -1,1 +1,1 @@
-include src/mcp_airflow_api/prompt_template.md
+include src/mcp_airflow_api/server_instructions.md

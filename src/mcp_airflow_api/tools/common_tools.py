@@ -1,15 +1,14 @@
 """
 Common tools shared between v1 and v2 APIs.
-Registers 54 tools in both API versions.
+Registers 53 tools in both API versions.
 User, permission, role, and dataset operations are supported only in v1.
 """
 
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote, urlencode
 from ..functions import (
-    read_prompt_template, parse_prompt_sections, 
     get_current_time_context, list_dags_internal, get_dag_detailed_info, 
-    PROMPT_TEMPLATE_PATH, get_api_version, dag_run_date_field, summarize_dag_run
+    get_api_version, dag_run_date_field, summarize_dag_run
 )
 import logging
 
@@ -20,36 +19,12 @@ logger = logging.getLogger(__name__)
 airflow_request = None
 
 def register_common_tools(mcp):
-    """Register 54 common tools, including operations supported only in v1."""
+    """Register 53 common tools, including operations supported only in v1."""
     
     if airflow_request is None:
         raise RuntimeError("airflow_request function must be set before registering common tools")
     
     logger.info("Registering common tools shared between v1 and v2")
-
-    # Template & Prompt Management
-    @mcp.tool()
-    async def get_prompt_template(section: Optional[str] = None, mode: Optional[str] = None) -> str:
-        """
-        [Tool Role]: Provides comprehensive prompt template for LLM interactions with Airflow operations.
-
-        Args:
-            section: Optional section name to get specific part of template
-            mode: Optional mode (summary/detailed) to control response verbosity
-
-        Returns:
-            Comprehensive template or specific section for optimal LLM guidance
-        """
-        template = read_prompt_template(PROMPT_TEMPLATE_PATH)
-        
-        if section:
-            sections = parse_prompt_sections(template)
-            for i, s in enumerate(sections):
-                if section.lower() in s.lower():
-                    return sections[i + 1]  # +1 to skip the title section
-            return f"Section '{section}' not found."
-    
-        return template
 
     # DAG Management (11 tools)
     @mcp.tool()
@@ -1389,4 +1364,4 @@ def register_common_tools(mcp):
         resp.raise_for_status()
         return resp.json()
 
-    logger.info("Registered all common tools (54 tools; includes v1-only operations)")
+    logger.info("Registered all common tools (53 tools; includes v1-only operations)")

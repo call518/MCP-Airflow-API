@@ -6,7 +6,8 @@
 **Key Components:**
 - `src/mcp_airflow_api/airflow_api.py`: 40+ `@mcp.tool()` decorators defining Airflow operations
 - `src/mcp_airflow_api/functions.py`: Global session management with connection pooling
-- `src/mcp_airflow_api/prompt_template.md`: Canonical English instructions for LLMs
+- `src/mcp_airflow_api/server_instructions.md`: MCP server instructions sent to clients (cross-tool rules only, at most 4,096 characters)
+- `docs/usage-guide.md`: User-facing example requests by area
 - `pyproject.toml`: Entry point `mcp-airflow-api = "mcp_airflow_mcp_main:main"`
 
 **Transport Logic:** Environment variable `FASTMCP_TYPE` controls stdio vs http mode:
@@ -48,10 +49,12 @@ def list_dags(limit=20, offset=0):
 ```
 
 ## Testing Philosophy
-Tests in `tests/test_prompt_template.py` are "resilient to template content changes":
-- Use `TEMPLATE_CONFIG` constants for validation thresholds
-- Test structure/behavior, not exact content
-- Fixture-based template loading for performance
+When adding or changing a tool:
+- Write its docstring and parameter descriptions; clients show these to the model.
+- Add example requests to `docs/usage-guide.md`.
+- Edit `server_instructions.md` only when a rule that spans several tools changes, and keep it at most 4,096 characters.
+
+`tests/test_server_instructions.py` checks the instructions length and delivery; `tests/test_tool_documentation.py` checks tool descriptions and documentation coverage.
 
 ## Environment Requirements
 **Required:** `AIRFLOW_API_BASE_URL`, `AIRFLOW_API_USERNAME`, `AIRFLOW_API_PASSWORD`
@@ -62,7 +65,7 @@ Tests in `tests/test_prompt_template.py` are "resilient to template content chan
 ## Development Workflow
 1. Local testing: `python -m mcp_airflow_mcp_main` (stdio mode)
 2. Docker development: `docker-compose up -d` then check http://localhost:8002/docs
-3. Testing: `pytest tests/` (uses resilient template validation)
+3. Testing: `pytest tests/`
 
 ---
-Key files: `airflow_api.py` (tools), `functions.py` (HTTP layer), `prompt_template.md` (LLM guidance)
+Key files: `airflow_api.py` (tools), `functions.py` (HTTP layer), `server_instructions.md` (LLM guidance)

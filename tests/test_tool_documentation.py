@@ -16,7 +16,7 @@ def anyio_backend() -> str:
 
 
 @pytest.mark.anyio
-@pytest.mark.parametrize("api_version, expected_count", [("v1", 54), ("v2", 56)])
+@pytest.mark.parametrize("api_version, expected_count", [("v1", 53), ("v2", 55)])
 async def test_tool_documentation(
     monkeypatch: pytest.MonkeyPatch, api_version: str, expected_count: int
 ) -> None:
@@ -26,7 +26,8 @@ async def test_tool_documentation(
     documentation = "\n".join(
         (
             (root / "README.md").read_text(),
-            (root / "src/mcp_airflow_api/prompt_template.md").read_text(),
+            (root / "docs/usage-guide.md").read_text(),
+            (root / "api_coverage_analysis.md").read_text(),
         )
     )
 
@@ -40,10 +41,3 @@ async def test_tool_documentation(
                 assert schema.get("description", "").strip(), (
                     f"{tool.name}.{parameter} has no description"
                 )
-
-        prompt = await client.get_prompt("airflow_cluster_monitoring")
-        content = prompt.messages[0].content
-        assert content.type == "text"
-        assert f"{expected_count} " in content.text
-        if api_version == "v2":
-            assert "8 common tools are v1-only" in content.text

@@ -1,7 +1,7 @@
 """
 Airflow API v2 (3.0+) MCP tools.
 Imports common tools and adds v2-specific asset management tools.
-Total: 56 registered tools (54 common + 2 v2-exclusive).
+Total: 55 registered tools (53 common + 2 v2-exclusive).
 """
 
 from typing import Any, Dict, Optional
@@ -20,7 +20,7 @@ def register_tools(mcp):
     # Set the global request function to v2
     common_tools.airflow_request = airflow_request_v2
     
-    # Register all 54 common tools (includes unsupported v1-only operations)
+    # Register all 53 common tools (includes unsupported v1-only operations)
     common_tools.register_common_tools(mcp)
     
     # Add V2-exclusive tools (2 tools)
@@ -101,5 +101,5 @@ def register_tools(mcp):
         }
 
     logger.info(
-        "Registered all Airflow API v2 tools (54 common + 2 asset tools = 56 tools)"
+        "Registered all Airflow API v2 tools (53 common + 2 asset tools = 55 tools)"
     )

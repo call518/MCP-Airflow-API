@@ -31,6 +31,11 @@ Trigger the example_etl DAG with today's processing date.
 Show assets updated by data_ingestion.  # Airflow 3.x only
 ```
 
+**More requests to try:** see
+[Example queries by area](docs/usage-guide.md#example-queries-by-area) for
+DAGs, task instances, XComs, pools, variables, configuration, monitoring,
+assets, datasets, users, plugins, and providers.
+
 ## Quick Start
 
 Choose one path. Both require an Airflow account and network access to its API.
@@ -180,8 +185,8 @@ configured account's permissions.
 | [Claude Desktop](docs/claude-desktop-guide.md) | MCPB, `uvx`, source, and remote connections |
 | [OpenWebUI](docs/openwebui-guide.md) | Model provider, direct MCP, optional MCPO, OpenAI API type and reasoning models, troubleshooting |
 | [Configuration and security](docs/configuration.md) | Environment variables, ports, Bearer authentication |
+| [Usage guide](docs/usage-guide.md) | [Example queries by area](docs/usage-guide.md#example-queries-by-area) |
 | [API coverage](api_coverage_analysis.md) | Detailed tool and Airflow endpoint coverage |
-| [Prompt and tool catalog](src/mcp_airflow_api/prompt_template.md) | Registered tools and example requests |
 
 ## Development
 

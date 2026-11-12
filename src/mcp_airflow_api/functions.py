@@ -7,9 +7,6 @@ import asyncio
 import json
 from typing import Any, Dict, Optional, List
 
-# Common constants
-PROMPT_TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "prompt_template.md")
-
 # Global session instance for connection pooling and performance optimization
 _airflow_session = None
 _jwt_token = None
@@ -277,37 +274,6 @@ async def close_airflow_session():
     if _airflow_session is not None:
         await _airflow_session.close()
         _airflow_session = None
-
-def read_prompt_template(path: str) -> str:
-    """
-    Reads the MCP prompt template file and returns its content as a string.
-    """
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
-
-
-def parse_prompt_sections(template: str):
-    """
-    Parses the prompt template into section headings and sections.
-    Returns (headings, sections).
-    """
-    lines = template.splitlines()
-    sections = []
-    current = []
-    headings = []
-    for line in lines:
-        if line.startswith("## "):
-            if current:
-                sections.append("\n".join(current))
-                current = []
-            headings.append(line[3:].strip())
-            current.append(line)
-        else:
-            current.append(line)
-    if current:
-        sections.append("\n".join(current))
-    return headings, sections
-
 
 def get_current_time_context() -> Dict[str, Any]:
     """
