@@ -1,10 +1,11 @@
 {
   "manifest_version": "0.4",
   "name": "mcp-airflow-api",
-  "display_name": "Airflow API",
+  "display_name": "MCP-Airflow-API",
   "version": "0.0.0",
   "description": "Inspect and operate Apache Airflow through its REST API.",
   "long_description": "Runs MCP-Airflow-API locally over stdio. Choose the Airflow API version and enter the target cluster URL and credentials in Claude Desktop.",
+  "icon": "icon.png",
   "author": {
     "name": "JungJungIn",
     "url": "https://github.com/call518"
